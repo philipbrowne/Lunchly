@@ -1,7 +1,7 @@
 /** Customer for Lunchly */
 
-const db = require("../db");
-const Reservation = require("./reservation");
+const db = require('../db');
+const Reservation = require('./reservation');
 
 /** Customer of the restaurant. */
 
@@ -12,7 +12,12 @@ class Customer {
     this.lastName = lastName;
     this.phone = phone;
     this.notes = notes;
+    this.fullName = `${this.firstName} ${this.lastName}`;
   }
+
+  // fullName() {
+  //   return `${this.firstName} ${this.lastName}`;
+  // }
 
   /** find all customers. */
 
@@ -26,7 +31,7 @@ class Customer {
        FROM customers
        ORDER BY last_name, first_name`
     );
-    return results.rows.map(c => new Customer(c));
+    return results.rows.map((c) => new Customer(c));
   }
 
   /** get a customer by ID. */
@@ -53,6 +58,29 @@ class Customer {
     return new Customer(customer);
   }
 
+  static async getBest() {
+    const results = await db.query(
+      `SELECT customers.id, first_name AS "firstName",  
+         last_name AS "lastName", 
+         customers.phone, customers.notes, COUNT(reservations.customer_id) FROM customers JOIN reservations ON customers.id = reservations.customer_id GROUP BY customers.id ORDER BY COUNT(reservations.customer_id) DESC LIMIT 10`
+    );
+    return results.rows.map((c) => new Customer(c));
+  }
+
+  static async getByName(name) {
+    const results = await db.query(
+      `SELECT id, 
+         first_name AS "firstName",  
+         last_name AS "lastName", 
+         phone, 
+         notes 
+        FROM customers WHERE CONCAT_WS(' ', first_name, last_name) ILIKE $1`,
+      [name]
+    );
+    console.log(results.rows);
+    return results.rows.map((c) => new Customer(c));
+  }
+
   /** get all reservations for this customer. */
 
   async getReservations() {
@@ -76,6 +104,7 @@ class Customer {
              WHERE id=$5`,
         [this.firstName, this.lastName, this.phone, this.notes, this.id]
       );
+      this.fullName = `${this.firstName} ${this.lastName}`;
     }
   }
 }
